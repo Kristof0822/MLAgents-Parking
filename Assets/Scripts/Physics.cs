@@ -4,14 +4,16 @@ using UnityEngine;
 using Unity.MLAgents;
 using Unity.MLAgents.Actuators;
 using Unity.MLAgents.Sensors;
-using JetBrains.Annotations;
+using Unity.VisualScripting;
 
 public class CarAgent : Agent
 {
+    public Randomizer Randomizer;
     public Rigidbody rb;
     public float moveSpeed = 10f;
     public float turnSpeed = 100f;
     private bool alreadyPenalized = false;
+    private Transform targetSpot;
 
     public override void Initialize()
     {
@@ -23,6 +25,8 @@ public class CarAgent : Agent
     {
         transform.localPosition = new Vector3(0, 0, -6);
         alreadyPenalized = false;
+        Randomizer.RandomizePositions();
+        targetSpot = Randomizer.currentTargetSpot;
     }
 
     public override void CollectObservations(VectorSensor sensor)
@@ -34,6 +38,13 @@ public class CarAgent : Agent
     {
         float move = Mathf.Clamp(actions.ContinuousActions[0], -1f, 1f);
         float turn = Mathf.Clamp(actions.ContinuousActions[1], -1f, 1f);
+
+        if (Vector3.Distance(transform.position, targetSpot.position) < 0.7f)
+        {
+            SetReward(+3f);
+            Debug.Log("On the Spot!");
+            EndEpisode();
+        }
 
         // Előre/hátra mozgatás
         rb.MovePosition(rb.position + transform.forward * move * moveSpeed * Time.fixedDeltaTime);
@@ -53,17 +64,11 @@ public class CarAgent : Agent
 
     private void OnCollisionEnter(Collision collision)
     {
-        if (!alreadyPenalized && (collision.collider.CompareTag("Wall") || collision.collider.CompareTag("Car")))
+        if (!alreadyPenalized && ((collision.collider.CompareTag("Wall") || collision.collider.CompareTag("Car"))))
         {
             alreadyPenalized = true;
             Debug.Log("Penalized collision");
             AddReward(-15f);
-            EndEpisode();
-        }
-        else if(collision.collider.CompareTag("Bollard"))
-        {
-            Debug.Log("Bollard Collision");
-            AddReward(+5f);
             EndEpisode();
         }
     }
