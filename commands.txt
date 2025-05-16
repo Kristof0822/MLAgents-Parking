@@ -1,0 +1,4 @@
+cd Projectname/Training
+mlagents-learn config.yaml --run-id=1
+cd results
+tensorboard --logdir=.
